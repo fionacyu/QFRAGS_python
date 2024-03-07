@@ -27,9 +27,9 @@ class subgraph:
         else:
             self.m_natoms = value.m_natoms
             self.m_offset = value.m_offset
-            self.m_nodes = value.m_nodes
+            self.m_nodes = value.m_nodes.copy()
             self.m_energy = value.m_energy
-            self.m_adjacency = value.m_adjacency.copy()
+            self.m_adjacency = [x.copy() for x in value.m_adjacency]
     
     def get_node(self, node: int) -> int:
         return self.m_nodes[node]
@@ -449,6 +449,7 @@ class mgraph:
                 priority: float = 0.5 * (node1_lone_elec/node1_degree + node2_lone_elec/node2_degree)
                 single_bond_priority.append((priority, iedge))
         
+
         single_bond_priority.sort()
 
         single_bond_no: int = len(single_bond_priority)
@@ -487,6 +488,7 @@ class mgraph:
             if (self.m_edge_change[edge_idx] == -1):
                 self.m_subgraphs[subgraph1].m_single_bonds.append(edge_idx)
 
+        
     def set_mirror(self, natoms: int) -> None:
         self.m_natoms = natoms
         self.m_adjacency = [[set()] for _ in range(natoms)]
@@ -557,14 +559,25 @@ class mgraph:
             element_volume[atomic_no2] += vij
 
             element_edge_counter[atomic_no1] += 1
-            element_edge_counter[atomic_no2] += 2
+            element_edge_counter[atomic_no2] += 1
         
         for element in element_volume:
             sigma: float = atomic_data.get_radii(element)
             include_vol: float = element_counter[element]/self.m_natoms * (4.0/3.0 * math.pi * sigma * sigma * sigma - element_volume[element]/element_edge_counter[element])
             self.m_ref_vol_atom += include_vol
+        print(f"m_ref_vol_atom: {self.m_ref_vol_atom}")
 
-    
+    def pair_volume(self, node1: int, node2: int) -> float:
+        atomic_no1: int = self.m_elements[node1]
+        atomic_no2: int = self.m_elements[node2]
 
-            
-            
+        dist2: float = self.distance2(node1, node2)
+        r1: float = atomic_data.get_radii(atomic_no1)
+        r2: float = atomic_data.get_radii(atomic_no2)
+
+        alpha1: float = math.pi * ((3 * 2 * math.sqrt(2))/(4 * math.pi * r1*r1*r1))**(2.0/3.0)
+        alpha2: float = math.pi * ((3 * 2 * math.sqrt(2))/(4 * math.pi * r2*r2*r2))**(2.0/3.0)
+        
+        vij: float = 8 * math.exp(-1 * (alpha1 * alpha2 * dist2)/(alpha1 + alpha2)) * (math.pi/(alpha1 + alpha2))**(3.0/2.0)
+
+        return vij

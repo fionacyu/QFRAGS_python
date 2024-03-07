@@ -31,7 +31,7 @@ class Molecule:
         elif len(monid) == 2:
             # dimer case
             self.m_monomers = 2
-            self.m_id = List[int] = [monid[0], monid[1]]
+            self.m_id: List[int] = [monid[0], monid[1]]
 
             global_natoms: int = graph.m_natoms
             node_sg_nidx: List[int] = graph.m_node_sg_nidx

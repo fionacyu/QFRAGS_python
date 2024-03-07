@@ -430,6 +430,7 @@ def get_initial_population(graph: mgraph.mgraph, subgraph: mgraph.subgraph, targ
     no_ref_points: int
 
     reference_points, no_ref_points = get_ref_points(graph, subgraph, target_size)
+
     print(f"no_ref_points: {no_ref_points}")
     for iedge in feasible_edges:
         edge: Tuple[int, int] = edges[iedge]
@@ -440,10 +441,9 @@ def get_initial_population(graph: mgraph.mgraph, subgraph: mgraph.subgraph, targ
         node2_idx: int = node_sg_nidx[node2]
 
         subgraph_copy.delete_edge(node1_idx, node2_idx)
-    
+
     fragid: List[int] = [0 for _ in range(natoms)]
-    nfrags: int = gtraverse.determine_fragid(fragid, subgraph_copy)
-    print(f"auxiliary nfrags: {nfrags}")
+    nfrags: int = gtraverse.determine_fragid(fragid, subgraph_copy) 
 
     mon_atoms: List[List[int]] = [[] for _ in range(nfrags)]
     mon_adjacency: List[Set[int]] = [set() for _ in range(nfrags)]
@@ -467,7 +467,6 @@ def get_initial_population(graph: mgraph.mgraph, subgraph: mgraph.subgraph, targ
         fid2: int = fragid[node2_idx]
 
         if (fid1 != fid2):
-            print(f"iedge {iedge}: fid1: {fid1}, fid2: {fid2}")
             mon_adjacency[fid1 - 1].add(fid2 - 1)
             mon_adjacency[fid2 - 1].add(fid1 - 1)
             mon_atoms[fid1 - 1].append(node2_idx + natoms)
