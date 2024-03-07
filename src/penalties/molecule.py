@@ -70,8 +70,29 @@ class Molecule:
             
             self.m_natoms = len(self.m_atom_ids)
     
-    def set_natoms_nohcap(self):
+    def set_natoms_nohcap(self) -> None:
         self.m_natoms_nohcap = len(self.m_atom_ids)
     
-    def set_natoms(self):
+    def set_natoms(self) -> None:
         self.m_natoms = len(self.m_atom_ids)
+    
+    def atom_ids(self) -> List[int]:
+        return self.m_atom_ids
+
+    def atom_ids(self, iatom: int) -> int:
+        return self.m_atom_ids[iatom]
+
+    def is_mon_hcap(self, atom_idx: int, mon_id: int) -> bool:
+        match mon_id:
+            case 0:
+                return atom_idx in self.m_mon1_hcaps
+            case 1:
+                return atom_idx in self.m_mon2_hcaps
+    
+    def get_mon_hcaps(self, mon_id: int) -> Set[int]:
+        match mon_id:
+            case 0:
+                return self.m_mon1_hcaps
+            case 1:
+                return self.m_mon2_hcaps
+            
