@@ -8,14 +8,18 @@ import boxing
 current_dir = os.path.dirname(os.path.realpath(__file__))
 gtraverse_dir = os.path.join(current_dir, '..', 'gtraverse')
 data_dir = os.path.join(current_dir, '..', 'data')
+uff_dir = os.path.join(current_dir, '..', 'uff')
+
 sys.path.append(gtraverse_dir)
 sys.path.append(data_dir)
 sys.path.append(current_dir)
+sys.path.append(uff_dir)
 
 import gtraverse
 import atomic_data
 import aromatic
 import hyperconjugated
+import uff
 
 
 def get_bond_order(dist: float, atomic_no_a: int, atomic_no_b: int) -> float:
@@ -762,7 +766,7 @@ def hyperconjugated_donors_acceptors(graph: mgraph.mgraph, boxarray: boxing.mbox
 
     # edges
     # print(f"hyperconj_iedges: ", end = " ")
-    # hyperconj_iedges = [0, 22, 3, 19, 24, 84, 28, 96, 97, 38, 43, 60, 48, 62, 56, 71, 151, 79, 92, 147, 91, 101, 102, 106, 204, 226, 125, 128, 131, 138, 254, 235, 143, 146, 158, 160, 272, 168, 176, 185, 189, 193, 199, 309, 208, 215, 217, 320, 230, 241, 239, 250, 253, 264, 266, 283, 291, 302, 390, 297, 300, 389, 311, 328, 407, 325, 408, 330, 336, 342, 347, 351, 356, 363, 368, 379, 383, 387, 397, 466, 416, 418, 421, 426, 469, 436, 440, 443, 451, 455, 464]
+    
     for ihyperconj_edge, hyperconj_edge in enumerate(hyperconj_iedges):
         graph.m_da_array[hyperconj_idx].set_natoms(2)
         bond = graph.m_edges[hyperconj_edge]
@@ -990,6 +994,7 @@ def pair_hyperconjugated_donors_acceptors(graph: mgraph.mgraph, boxarray: boxing
 
                                         box_array[neighbour_box].m_hyper_systems.add(hyperconj_sys_idx)
                                         box_array[neighbour_box].m_hyper_systems.add(hyperconj_sys_idx + 1)
+    print(f"no hyperconjugated systems: {len(graph.m_hyperconjugated_systems)}")
 
 def distribute_hyper_conjsys_from_mgraph(graph: mgraph.mgraph) -> None:
 
@@ -1044,8 +1049,11 @@ def characterise_graph(graph: mgraph.mgraph, boxarray: boxing.mbox_array) -> Non
     set_edges(graph, boxarray)
     graph.determine_hybridisation()
     graph.check_hybridisation()
+    graph.set_atom_types()
     gtraverse.identify_connected_components(graph)
+    uff.calculate_evdw_sg(graph)
     define_conjugate_regions(graph, boxarray)
+    
     graph.check_bonds_adjacent_conj()
     graph.set_edges_sg()
     define_cycles(graph, boxarray)

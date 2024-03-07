@@ -285,7 +285,7 @@ class mgraph:
             atomic_number: int = self.m_elements[iatom]
             coordination_number: int = self.m_coordination_number[iatom]
 
-            hash_value: int = atomic_data + 53 * coordination_number
+            hash_value: int = atomic_number + 53 * coordination_number
             atom_type_idx: int
             oxygen_neighbours: int = 0
 
@@ -581,3 +581,12 @@ class mgraph:
         vij: float = 8 * math.exp(-1 * (alpha1 * alpha2 * dist2)/(alpha1 + alpha2)) * (math.pi/(alpha1 + alpha2))**(3.0/2.0)
 
         return vij
+
+    def is_one_two_bonds_apart(self, node1: int, node2: int) -> bool:
+        atom_pair_idx: int
+        if node1 < node2:
+            atom_pair_idx = int(node2 * (node2 - 1) / 2 + node1)
+        else:
+            atom_pair_idx = int(node1 * (node1 -1) / 2 + node2)
+
+        return self.m_atom_pair_connections[atom_pair_idx] == 1
