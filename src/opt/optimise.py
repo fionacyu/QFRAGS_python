@@ -43,6 +43,15 @@ class Optimiser_Frag:
         converged: bool = False
         pop: ga.population = ga.population(self.m_graph, subgraph, target_size, self.m_boxarray)
 
+        while not converged:
+            if pop.m_num_offspring == 0:
+                break
+            pop.create_next_generation()
+            if pop.m_min_score_iters > 50 or pop.m_generation >= 100:
+                converged = True
+
+        
+
 
     def run(self) -> None:
         self.frag(self.m_starting_subgraph, self.m_subgraphs, True)
