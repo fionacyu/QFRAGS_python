@@ -13,23 +13,25 @@ class subgraph:
         self.m_cycles: List[rings.cycle] = []
         self.m_naromatic_systems: int
         self.m_aromatic_cycles: List[Set[int]] = []
-        self.m_feasible_edges: List[int] = [] # contains edge indices localed in global mgraph
         
         self.m_single_bonds: List[int] = []
         self.m_conjugated_systems: List[int] = []
         self.m_hyperconjugated_systems: List[int] = []
+        
         if not value:
             self.m_offset: int # points to the atom w the smallest global index
             self.m_nodes: List[int] = []
             self.m_natoms: int
             self.m_energy: float = 0.0
             self.m_adjacency: List[Set[int]] = []
+            self.m_feasible_edges: List[int] = [] # contains edge indices localed in global mgraph
         else:
             self.m_natoms = value.m_natoms
             self.m_offset = value.m_offset
             self.m_nodes = value.m_nodes.copy()
             self.m_energy = value.m_energy
             self.m_adjacency = [x.copy() for x in value.m_adjacency]
+            self.m_feasible_edges = value.m_feasible_edges.copy()
     
     def get_node(self, node: int) -> int:
         return self.m_nodes[node]
