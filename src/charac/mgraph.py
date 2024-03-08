@@ -111,6 +111,14 @@ class mgraph:
         self.m_node_sg: List[int] = []
         self.m_node_sg_nidx: List[int] = []
 
+        # weights
+        self.m_beta_pe = 0.13581564349379915
+        self.m_beta_conj = 0.14594295898207302
+        self.m_beta_hyper = 0.3133251394715002
+        self.m_beta_vol = 0.10941644829196222
+        self.m_beta_comp = 0.0014263024478876928
+        self.m_beta_vrange = 0.29407350731277765
+
     def set_range(self, x_min: float, x_max: float, y_min:float, 
         y_max: float, z_min: float, z_max: float) -> None:
         self.m_range = [x_min, x_max, y_min, y_max, z_min, z_max]
@@ -565,7 +573,6 @@ class mgraph:
             sigma: float = atomic_data.get_radii(element)
             include_vol: float = element_counter[element]/self.m_natoms * (4.0/3.0 * math.pi * sigma * sigma * sigma - element_volume[element]/element_edge_counter[element])
             self.m_ref_vol_atom += include_vol
-        print(f"m_ref_vol_atom: {self.m_ref_vol_atom}")
 
     def pair_volume(self, node1: int, node2: int) -> float:
         atomic_no1: int = self.m_elements[node1]
