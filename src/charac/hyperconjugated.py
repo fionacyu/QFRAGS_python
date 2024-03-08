@@ -1,4 +1,4 @@
-from typing import List, Tuple, Set, Dict
+from typing import List
 
 class hyper_da: 
     # donor and acceptor
@@ -19,9 +19,15 @@ class hyper_da:
         self.m_classification = classification
 
 class hypersys:
-    def __init__(self) -> None:
-        self.m_donor: int
-        self.m_acceptor: int
-        self.m_connection_path: List[int] = []
-        self.m_separation: int
+    def __init__(self, value = None) -> None:
 
+        if not value:
+            self.m_donor: int
+            self.m_acceptor: int
+            self.m_connection_path: List[int] = []
+            self.m_separation: int
+        else:
+            self.m_donor: int = value.m_donor
+            self.m_acceptor: int = value.m_acceptor
+            self.m_connection_path: List[int] = value.m_connection_path.copy()
+            self.m_separation: int = value.m_separation

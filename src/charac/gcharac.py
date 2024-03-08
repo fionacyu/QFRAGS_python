@@ -765,8 +765,8 @@ def hyperconjugated_donors_acceptors(graph: mgraph.mgraph, boxarray: boxing.mbox
         hyperconj_idx += 1
 
     # edges
-    # print(f"hyperconj_iedges: ", end = " ")
     
+    # print(f"hyperconj_iedges: {hyperconj_iedges}")
     for ihyperconj_edge, hyperconj_edge in enumerate(hyperconj_iedges):
         graph.m_da_array[hyperconj_idx].set_natoms(2)
         bond = graph.m_edges[hyperconj_edge]
@@ -930,12 +930,12 @@ def pair_hyperconjugated_donors_acceptors(graph: mgraph.mgraph, boxarray: boxing
                                 box_array[ibox].m_hyper_systems.add(hyperconj_sys_idx)
                             
                             case 2:
-                                hyperconj_system2 = hyperconjugated.hypersys()
-                                hyperconj_system2.m_donor = donor_acceptor_j
-                                hyperconj_system2.m_acceptor = donor_acceptor_i
-
                                 hyperconj_system.m_donor = donor_acceptor_i
                                 hyperconj_system.m_acceptor = donor_acceptor_j
+
+                                hyperconj_system2 = hyperconjugated.hypersys(hyperconj_system)
+                                hyperconj_system2.m_donor = donor_acceptor_j
+                                hyperconj_system2.m_acceptor = donor_acceptor_i
 
                                 graph.m_hyperconjugated_systems.append(hyperconj_system)
                                 graph.m_hyperconjugated_systems.append(hyperconj_system2)
@@ -979,12 +979,12 @@ def pair_hyperconjugated_donors_acceptors(graph: mgraph.mgraph, boxarray: boxing
                                         box_array[ibox].m_hyper_systems.add(hyperconj_sys_idx)
                                         box_array[neighbour_box].m_hyper_systems.add(hyperconj_sys_idx)
                                     case 2:
-                                        hyperconj_system2 = hyperconjugated.hypersys()
-                                        hyperconj_system2.m_donor = donor_acceptor_k
-                                        hyperconj_system2.m_acceptor = donor_acceptor_i
-
                                         hyperconj_system.m_donor = donor_acceptor_i
                                         hyperconj_system.m_acceptor = donor_acceptor_k
+
+                                        hyperconj_system2 = hyperconjugated.hypersys(hyperconj_system)
+                                        hyperconj_system2.m_donor = donor_acceptor_k
+                                        hyperconj_system2.m_acceptor = donor_acceptor_i
 
                                         graph.m_hyperconjugated_systems.append(hyperconj_system)
                                         graph.m_hyperconjugated_systems.append(hyperconj_system2)
@@ -1051,7 +1051,7 @@ def characterise_graph(graph: mgraph.mgraph, boxarray: boxing.mbox_array) -> Non
     graph.check_hybridisation()
     graph.set_atom_types()
     gtraverse.identify_connected_components(graph)
-    uff.calculate_evdw_sg(graph)
+    
     define_conjugate_regions(graph, boxarray)
     
     graph.check_bonds_adjacent_conj()
@@ -1062,5 +1062,6 @@ def characterise_graph(graph: mgraph.mgraph, boxarray: boxing.mbox_array) -> Non
     pair_hyperconjugated_donors_acceptors(graph, boxarray)
     distribute_hyper_conjsys_from_mgraph(graph)
     graph.determine_reference_volume()
+    uff.calculate_evdw_sg(graph)
     determine_feasible_edges(graph)
     
