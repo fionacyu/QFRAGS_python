@@ -429,7 +429,7 @@ def set_edges(graph: mgraph.mgraph, box_array: boxing.mbox_array) -> None:
 
     graph.set_edge_count()
 
-def define_conjugate_regions(graph: mgraph.mgraph, boxaray: boxing.mbox_array) -> None:
+def define_conjugate_regions(graph: mgraph.mgraph, boxarray: boxing.mbox_array) -> None:
     unsaturated_nodes: Set[int] = set()
     edges = graph.m_edges
     
@@ -446,10 +446,12 @@ def define_conjugate_regions(graph: mgraph.mgraph, boxaray: boxing.mbox_array) -
 
     colors: List[int] = [0 for _ in range(graph.m_natoms)]
 
-    conjsys_count: int = 1
+    conjsys_count: List[int] = [1]
     for unsat_node in unsaturated_nodes:
+        
         if colors[unsat_node] == 0:
-            gtraverse.bfs_conjugated(graph, unsat_node, conjsys_count, colors, boxaray)
+            gtraverse.bfs_conjugated(graph, unsat_node, conjsys_count, colors, boxarray)
+        
         valence: int = atomic_data.get_valence(graph.m_elements[unsat_node])
         sigma_bonds_number: int = graph.m_degree[unsat_node]
         coordination_number: int = graph.m_coordination_number[unsat_node]
@@ -457,6 +459,7 @@ def define_conjugate_regions(graph: mgraph.mgraph, boxaray: boxing.mbox_array) -
 
         pi_electrons: int = valence + sigma_bonds_number - 2 * coordination_number - charge
         graph.m_pi_electrons[unsat_node] = pi_electrons
+
 
 def define_cycles(graph: mgraph.mgraph, boxarray: boxing.mbox_array) -> None:
     subgraph_count: int = len(graph.m_subgraphs)

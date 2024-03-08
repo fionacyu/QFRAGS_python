@@ -68,7 +68,7 @@ def get_unsaturated_neighbours(graph: mgraph.mgraph, node_label: int) -> Set[int
     
     return unsaturated_neighbours
 
-def bfs_conjugated(graph: mgraph.mgraph, seed_node: int, conjsys_count: int, colors: List[int], 
+def bfs_conjugated(graph: mgraph.mgraph, seed_node: int, conjsys_count: List[int], colors: List[int], 
                    boxaray: boxing.mbox_array) -> None:
     conjugated_nodes: Set[int] = set()
     conjugated_edges_hash_values: Set[int] = set()
@@ -106,7 +106,7 @@ def bfs_conjugated(graph: mgraph.mgraph, seed_node: int, conjsys_count: int, col
 
         for conj_node in conjugated_nodes:
             box_id: int = graph.get_boxid(conj_node)
-            box_array[box_id].add_conj_sys(conjsys_count)
+            box_array[box_id].add_conj_sys(conjsys_count[0])
             conjugated_system.m_nodes.append(conj_node)
             graph.m_conjugation_status[conj_node] = 1
         
@@ -114,7 +114,7 @@ def bfs_conjugated(graph: mgraph.mgraph, seed_node: int, conjsys_count: int, col
             conjugated_system.m_edges_hash_values.append(conj_edge_hash_value)
         
         graph.m_conjugated_systems.append(conjugated_system)
-        conjsys_count += 1
+        conjsys_count[0] += 1
 
 def bfs_tree(graph: mgraph.mgraph, ortho_edges: List[Tuple[int, int]], mst_edges: List[Tuple[int, int]], 
              offset: int, natoms: int) -> None: 
