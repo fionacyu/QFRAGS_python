@@ -22,6 +22,7 @@ class individual:
         
         self.m_target_size: int = target_fsize
         self.m_no_genes: int = no_genes
+        self.m_off_lim_edges: List[int] = [0 for _ in range(self.m_no_genes)]
 
         # the following are references to pre-existing objects, these are not modified
         self.m_graph: mgraph.mgraph = graph
@@ -37,17 +38,22 @@ class individual:
         self.p_pe: float
         self.p_conj: float
         self.p_hyper: float
+        self.pe_diff: float
     
-    def calculate_score(self):
+    def calculate_score(self) -> float:
         return penalty.calculate_score(self)
     
-    def vol_penalty(self, subgraph_copy: mgraph.subgraph):
+    def vol_penalty(self, subgraph_copy: mgraph.subgraph) -> float:
         return penalty.vol_penalty(self, subgraph_copy)
     
-    def calculate_fragment_volume(self, subgraph_copy: mgraph.subgraph, seed_node: int, colors: List[int]):
+    def calculate_fragment_volume(self, subgraph_copy: mgraph.subgraph, seed_node: int, colors: List[int]) -> Tuple[float, int]:
         return penalty.calculate_fragment_volume(self, subgraph_copy, seed_node, colors)
 
-
+    def conjugation_penalty(self, subgraph_copy: mgraph.subgraph, conjugated_systems: Set[int]) -> float:
+        return penalty.conjugation_penalty(self, subgraph_copy, conjugated_systems)
+    
+    def hyperconjugation_penalty(self, subgraph_copy: mgraph.subgraph, hyperconjugated_systems: Set[int]) -> float:
+        return penalty.hyperconjugation_penalty(self, subgraph_copy, hyperconjugated_systems)
 
 class population:
     def __init__(self, graph: mgraph.mgraph, subgraph: mgraph.subgraph, target_fsize: int,

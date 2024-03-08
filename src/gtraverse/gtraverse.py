@@ -1,7 +1,7 @@
 import os
 import sys
 import queue
-from typing import List, Tuple, Set
+from typing import List, Tuple, Set, Dict
 
 current_dir = os.path.dirname(os.path.realpath(__file__))
 charac_dir = os.path.join(current_dir, '..', 'charac')
@@ -14,6 +14,7 @@ import mgraph
 import boxing
 import conjugated
 import mon_sorter
+import hyperconjugated
 
 def bfs_connected_component(graph: mgraph.mgraph, subgraph: mgraph.subgraph, seed_node: int, 
     colors: List[int], comp_label: int) -> None: # breadth first search
@@ -328,3 +329,148 @@ def patch_initial_pop_bfs(mon_adjacency: List[Set[int]], seed_mon: int, colors: 
                 if fsize/target_size > 0.9:
                     return
         colors[mon_label] = 2
+
+def get_unsaturated_neighbours_subgraph(graph: mgraph.mgraph, subgraph_copy: mgraph.subgraph, node_label: int) -> Set[int]:
+    unsat_neighbours: Set[int] = set()
+    neighbours: Set[int] = subgraph_copy.get_neighbours(node_label)
+
+    for neighbour in neighbours:
+        global_node_idx: int = subgraph_copy.get_node(neighbour)
+        coordination_number: int = graph.m_coordination_number[global_node_idx]
+
+        if (coordination_number < 4 and coordination_number > 1):
+            unsat_neighbours.add(neighbour)
+    return unsat_neighbours
+
+def bfs_conj_pi(graph: mgraph.mgraph, subgraph_copy: mgraph.subgraph, seed_node: int,
+                pi_elec_subtotal: List[int], colors: List[int], connected_comp_size: List[int]) -> None:
+    
+    bfs_queue: queue.Queue = queue.Queue()
+    bfs_queue.put(seed_node)
+
+    while not bfs_queue.empty():
+        node_label: int = bfs_queue.get()
+        neighbours = get_unsaturated_neighbours_subgraph(graph, subgraph_copy, node_label)
+
+        for neighbour in neighbours:
+            if colors[neighbour] == 0:
+                global_node_idx: int = subgraph_copy.get_node(neighbour)
+                pi_elec_subtotal[0] += graph.m_pi_electrons[global_node_idx]
+                colors[neighbour] = 1
+                bfs_queue.put(neighbour)
+                connected_comp_size[0] += 1
+        colors[node_label] = 2
+
+def hyper_neighbours(graph: mgraph.mgraph, subgraph_copy: mgraph.subgraph, node_label: int, 
+                     all_hyper_nodes: Set[int]) -> Set[int]:
+    node_sg_nidx: List[int] = graph.m_node_sg_nidx
+    local_node_idx: int = node_sg_nidx[node_label]
+
+    neighbours = subgraph_copy.get_neighbours(local_node_idx)
+
+    final_neighbours: Set[int] = set()
+    for neighbour in neighbours:
+        global_node_idx: int = subgraph_copy.get_node(neighbour)
+        if global_node_idx in all_hyper_nodes:
+            final_neighbours.add(global_node_idx)
+    return final_neighbours
+ 
+def bfs_hyper_pi(graph: mgraph.mgraph, subgraph_copy: mgraph.subgraph, visited_nodes: Set[int], seed_node: int,
+                 node_electrons: Dict[int, int], hyper_nodes: List[int]) -> Tuple[float, float]:
+    
+    bfs_queue: queue.Queue = queue.Queue()
+    visited_nodes.add(seed_node)
+    bfs_queue.put(seed_node)
+
+    electrons_subtotal: int = node_electrons[seed_node] if node_electrons[seed_node] > 0 else 0
+    da_nodes: int = 1 if node_electrons[seed_node] != -2 else 0
+    no_donor_nodes: int = 1 if node_electrons[seed_node] >= 0 else 0
+    no_acceptor_nodes: int = 1 if node_electrons[seed_node] == -1 else 0
+
+    while not bfs_queue.empty():
+        node_label: int = bfs_queue.get()
+
+        neighbours = hyper_neighbours(graph, subgraph_copy, node_label, hyper_nodes)
+        for neighbour in neighbours:
+            if neighbour not in visited_nodes:
+                if (node_electrons[neighbour] > 0):
+                    no_donor_nodes += 1
+                    electrons_subtotal += node_electrons[neighbour]
+                elif (node_electrons[neighbour] == -1):
+                    no_acceptor_nodes += 1
+                
+                if (node_electrons[neighbour] != -2):
+                    da_nodes += 1
+                visited_nodes.add(neighbour)
+                bfs_queue.put(neighbour)
+    
+    donor_score: float = electrons_subtotal / da_nodes if no_donor_nodes > 0 else 0.0
+    acceptor_score: float = -electrons_subtotal / da_nodes if no_acceptor_nodes > 0 else 0.0
+
+    return donor_score, acceptor_score
+
+def delta_hyperconjugation(graph: mgraph.mgraph, subgraph_copy: mgraph.subgraph,
+                           hypersystem_idx: int) -> Tuple[float, float]:
+    
+    donor_acceptor_array: List[hyperconjugated.hyper_da] = graph.m_da_array
+    donor_idx: int = graph.m_hyperconjugated_systems[hypersystem_idx].m_donor
+    acceptor_idx: int = graph.m_hyperconjugated_systems[hypersystem_idx].m_acceptor
+
+    donor_nodes: List[int] = donor_acceptor_array[donor_idx].m_nodes
+    acceptor_nodes: List[int] = donor_acceptor_array[acceptor_idx].m_nodes
+
+    donor_node_electrons: List[int] = donor_acceptor_array[donor_idx].m_node_electrons
+
+    separation: int = graph.m_hyperconjugated_systems[hypersystem_idx].m_separation
+    connection_path: List[int] = graph.m_hyperconjugated_systems[hypersystem_idx].m_connection_path
+
+    no_donor_nodes: int = len(donor_nodes)
+    no_acceptor_nodes: int = len(acceptor_nodes)
+    total_nodes: int = separation + 1 + no_acceptor_nodes + no_donor_nodes
+
+    all_nodes: Set[int] = set()
+    node_electrons: Dict[int, int] = {}
+    total_donor_electrons: int = 0
+    for inode in range(0, total_nodes):
+        node: int
+        if (inode < no_donor_nodes):
+            node = donor_nodes[inode]
+            node_electrons[node] = donor_node_electrons[inode]
+            total_donor_electrons += donor_node_electrons[inode]
+        elif (inode >= no_donor_nodes and inode < no_acceptor_nodes + no_donor_nodes):
+            node = acceptor_nodes[inode - no_donor_nodes]
+            node_electrons[node] = -1
+        elif (inode >= no_acceptor_nodes + no_donor_nodes):
+            node = connection_path[inode - no_donor_nodes - no_acceptor_nodes]
+            if node not in node_electrons:
+                node_electrons[node] = -2
+        all_nodes.add(node)
+
+    total_ds: float = 0.0
+    total_as: float = 0.0
+    
+    ds_count: int = 0
+    as_count: int = 0
+
+    visited_nodes: Set[int] = set()
+    for node in all_nodes:
+        if node not in visited_nodes:
+            donor_score, acceptor_score = bfs_hyper_pi(graph, subgraph_copy, visited_nodes, node, node_electrons, all_nodes)
+            total_ds += donor_score
+            total_as += acceptor_score
+
+            if donor_score > 0.0:
+                ds_count += 1
+            if acceptor_score > 0.0:
+                as_count += 1
+    
+    ds_score: float = total_ds/ds_count if ds_count > 0 else 0
+    as_score: float = total_as/as_count if as_count > 0 else 0
+
+    unweighted_penalty: float = ds_score + as_score
+    worst_score: float = total_donor_electrons / no_donor_nodes
+    return unweighted_penalty, worst_score
+
+
+
+

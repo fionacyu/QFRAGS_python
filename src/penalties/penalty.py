@@ -9,6 +9,7 @@ current_dir = os.path.dirname(os.path.realpath(__file__))
 charac_dir = os.path.join(current_dir, '..', 'charac')
 gtraverse_dir = os.path.join(current_dir, '..', 'gtraverse')
 data_dir = os.path.join(current_dir, '..', 'data')
+uff_dir = os.path.join(current_dir, '..', 'uff')
 
 sys.path.append(charac_dir)
 sys.path.append(current_dir)
@@ -19,6 +20,7 @@ import mgraph
 import gtraverse
 import molecule
 import atomic_data
+import uff
 
 def calculate_fragment_volume(self, subgraph_copy: mgraph.subgraph, seed_node: int, 
                               colors: List[int]) -> Tuple[float, int]:
@@ -40,7 +42,6 @@ def calculate_fragment_volume(self, subgraph_copy: mgraph.subgraph, seed_node: i
         node_label: int = bfs_queue.get()
         neighbours: Set[int] = subgraph_copy.get_neighbours(node_label)
         global_node_idx: int = subgraph_copy.get_node(node_label)
-        node_atomic_no: int = elements[global_node_idx]
 
         for neighbour in neighbours:
             global_neighbour_idx: int = subgraph_copy.get_node(neighbour)
@@ -109,6 +110,85 @@ def vol_penalty(self, subgraph_copy: mgraph.subgraph) -> Tuple[float, float, flo
     pe_sf: float = math.sqrt(nfrags) * min_frag_size / self.m_target_size
     return volume_sigmoid(volume_deviation), volume_range_sigmoid(reference_volume, volume_range), pe_sf
 
+def hyper_conj_sigmoid(x: float, x_max: float):
+    tol: float = 0.05
+    a: float = -1/x_max * math.log(tol/(2-tol))
+    numerator: float = (1 - math.exp(-1 * a * x))
+    denominator: float = (1 + math.exp(-1 * a * x))
+
+    return (numerator/denominator)
+
+def conjugation_penalty(self, subgraph_copy: mgraph.subgraph, conjugated_systems: Set[int]) -> float:
+    node_sg_nidx: List[int] = self.m_graph.m_node_sg_nidx
+    natoms: int = self.m_subgraph.m_natoms
+    no_cs_affected: int = 0 # no. of conj systems affected
+
+    p_conj_total: float = 0.0
+
+    for conj_system in conjugated_systems:
+        pi_electrons: int = 0
+        colors: List[int] = [0 for _ in range(natoms)]
+        local_cs_score_sum: float = 0.0
+        cs_natoms: int = self.m_graph.m_conjugated_systems[conj_system].m_natoms
+        worst_cs: int = cs_natoms  - 1
+        for node in self.m_graph.m_conjugated_systems[conj_system].m_nodes:
+            local_node_idx: int = node_sg_nidx[node]
+            pi_electrons += self.m_graph.m_pi_electrons[node]
+
+            if colors[local_node_idx] == 0:
+                pi_elec_subtotal: List[int] = [self.m_graph.m_pi_electrons[node]]
+                connected_comp_size: List[int] = [1]
+
+                gtraverse.bfs_conj_pi(self.m_graph, subgraph_copy, local_node_idx, pi_elec_subtotal, colors, connected_comp_size)
+                local_cs_score: float = pi_elec_subtotal[0] / connected_comp_size[0]
+                local_cs_score_sum += local_cs_score
+
+        cs_score_after: float = local_cs_score_sum / cs_natoms
+        cs_score: float = pi_electrons / (cs_natoms * cs_natoms)
+        delta_conj: float = (cs_score_after - cs_score)/cs_score
+        p_conj: float = hyper_conj_sigmoid(delta_conj, worst_cs)
+
+        if (p_conj > 0.0):
+            p_conj_total += p_conj
+            no_cs_affected += 1
+    
+    if (no_cs_affected > 0):
+        return p_conj_total/no_cs_affected
+    else:
+        return 0.0
+
+def hyperconjugation_penalty(self, subgraph_copy: mgraph.subgraph, hyperconjugated_systems: Set[int]) -> float:
+    p_hyper_total: float = 0.0
+    no_hs_affected: int = 0
+
+    for hyperconj_system in hyperconjugated_systems:
+        unweighted_penalty: float
+        worst_score: float
+        unweighted_penalty, worst_score = gtraverse.delta_hyperconjugation(self.m_graph, subgraph_copy, hyperconj_system)
+        p_hyper: float = (1.0 / self.m_graph.m_hyperconjugated_systems[hyperconj_system].m_separation) * hyper_conj_sigmoid(unweighted_penalty, worst_score)
+        p_hyper_total += p_hyper
+        if p_hyper > 0.0:
+            no_hs_affected += 1
+    return (p_hyper_total / no_hs_affected) if no_hs_affected > 0 else 0.0
+
+def potential_energy_sigmoid(x: float, pe_sf: float) -> float:
+    tol: float = 0.05
+    xref: float = 10.0
+    xmid: float = 25.0
+    a: float = -1/pe_sf * math.log((1/tol) - 1) / (xref - xmid)
+
+    try:
+        pos = 1/(1 + math.exp(-a/pe_sf * (x - pe_sf * xmid)))
+    except OverflowError:
+        pos = 0.0
+    
+    try:
+        neg = 1/(1 + math.exp(-a/pe_sf * (-1 * x - pe_sf * xmid)))
+    except OverflowError:
+        neg = 0.0
+    
+    return (pos + neg)
+
 def calculate_score(self) -> float:
     # member function of inidividual
     natoms: int = self.m_subgraph.m_natoms
@@ -148,11 +228,16 @@ def calculate_score(self) -> float:
             for conj_system in self.m_subgraph.m_conjugated_systems:
                 if conj_system in conjugated_systems1 or conj_system in conjugated_systems2:
                     conjugated_systems.add(conj_system)
+                    # print(f"conj system: {conj_system}")
             
             for hyperconj_system in self.m_subgraph.m_hyperconjugated_systems:
                 if hyperconj_system in hyperconjugated_systems1 or hyperconj_system in hyperconjugated_systems2:
                     hyperconjugated_systems.add(hyperconj_system)
+                    # print(f"hyper system: {hyperconj_system}")
     
+    # print(f"self.m_subgraph.m_conjugated_systems: {self.m_subgraph.m_conjugated_systems}")
+    # print(f"hyperconjugated_systems: {hyperconjugated_systems}")
+
     fragid: List[int] = [0 for _ in range(natoms)]
     nfrags: int = gtraverse.determine_fragid(fragid, subgraph_copy)
 
@@ -195,17 +280,67 @@ def calculate_score(self) -> float:
         monomer_list[ifrag].set_natoms()
 
     # now create dimers
+    ndimers: int = int((nfrags * (nfrags-1))/2)
+    mon_dimer_map: List[int] = [-1 for _ in range(ndimers)]
+    dimer_count: int = 0
     for imon in range(0, nfrags):
         for jmon in range(0, imon):
             dimer: molecule.Molecule = molecule.Molecule([jmon, imon], monomer_list[jmon], monomer_list[imon],
                                      fragid, self.m_graph)
             dimer_list.append(dimer)
+            
+            y: int = imon
+            x: int = jmon
+            idx: int = int(y*(y-1)/2 + x)
+            mon_dimer_map[idx] = dimer_count
+            dimer_count += 1
 
     dimer_energy: List[float] = [0.0 for _ in range(len(dimer_list))]
 
     pe_sf: float
     self.p_comp = 1 / nfrags
     self.p_vol, self.p_vrange, pe_sf = self.vol_penalty(subgraph_copy)
+    self.p_conj = self.conjugation_penalty(subgraph_copy, conjugated_systems)
+    self.p_hyper = self.hyperconjugation_penalty(subgraph_copy, hyperconjugated_systems)
+    self.pe_diff = uff.mbe1_diff(self.m_graph, monomer_list, dimer_list, dimer_energy)
+    self.p_pe = potential_energy_sigmoid(self.pe_diff, pe_sf)
 
+    final_penalty = self.m_graph.m_beta_vrange * self.p_vrange
+    final_penalty += self.m_graph.m_beta_comp * self.p_comp
+    final_penalty += self.m_graph.m_beta_pe * self.p_pe
+    final_penalty += self.m_graph.m_beta_conj * self.p_conj
+    final_penalty += self.m_graph.m_beta_hyper * self.p_hyper
+    final_penalty += self.m_graph.m_beta_vol * self.p_vol
 
-    return 0.0
+    # update off limit edges
+    for isol, sol in enumerate(self.solution):
+        if (sol == 1):
+            edge: Tuple[int, int] = edges[feasible_edges[isol]]
+            node1: int = edge[0]
+            node2: int = edge[1]
+            node1_idx: int = node_sg_nidx[node1]
+            node2_idx: int = node_sg_nidx[node2]
+
+            fid1: int = fragid[node1_idx] - 1
+            fid2: int = fragid[node2_idx] - 1
+
+            jmon: int
+            imon: int
+
+            if (fid1 < fid2):
+                jmon = fid1
+                imon = fid2
+            else:
+                imon = fid1
+                jmon = fid2
+            
+            y: int = imon
+            x: int = jmon
+            idx: int = int(y*(y-1)/2 + x)
+            dimer_idx: int = mon_dimer_map[idx]
+
+            if abs(dimer_energy[dimer_idx]) > 10.0:
+                self.m_off_lim_edges[isol] = 1
+
+    
+    return final_penalty
