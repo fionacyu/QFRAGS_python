@@ -26,6 +26,7 @@ def read_input(graph: mgraph, input_file: str) -> None:
 
     graph.m_coordinates = coordinates
     graph.m_charges = charges    
+    graph.m_name = input_file.split(".json")[0]
 
     x_values: List[float] = []
     y_values: List[float] = []

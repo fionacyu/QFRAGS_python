@@ -77,6 +77,7 @@ class subgraph:
 
 class mgraph:
     def __init__(self) -> None:
+        self.m_name: str
         self.m_natoms: int
         self.m_coordinates: List[float] = []
         self.m_elements: List[int] = []
@@ -252,8 +253,6 @@ class mgraph:
             charge: int = self.m_charges[iatom]
 
             cbe: float = valence_elec - 0.5 * bonding_elec
-            # if cbe < 0:
-            #     cbe = 0
             electron_domain: int = math.ceil(degree + 0.5 * (cbe - charge))
 
             self.m_coordination_number[iatom] = electron_domain

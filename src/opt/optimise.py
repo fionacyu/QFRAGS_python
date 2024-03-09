@@ -1,17 +1,21 @@
 import os
 import sys
 import math
-from typing import List, Tuple, Set, Dict
+import json
+import shutil
+from typing import List, Tuple, Set, Dict, Any
 
 current_dir = os.path.dirname(os.path.realpath(__file__))
 charac_dir = os.path.join(current_dir, '..', 'charac')
 gtraverse_dir = os.path.join(current_dir, '..', 'gtraverse')
 uff_dir = os.path.join(current_dir, '..', 'uff')
+data_dir = os.path.join(current_dir, '..', 'data')
 
 sys.path.append(charac_dir)
 sys.path.append(current_dir)
 sys.path.append(gtraverse_dir)
 sys.path.append(uff_dir)
+sys.path.append(data_dir)
 
 import mgraph
 import boxing
@@ -19,6 +23,7 @@ import hyperconjugated
 import ga
 import gtraverse
 import uff
+import atomic_data
 
 class Optimiser_Frag:
     def __init__(self, graph: mgraph.mgraph, boxarray: boxing.mbox_array) -> None:
@@ -192,7 +197,6 @@ class Optimiser_Frag:
         best_sol: List[int] = pop.m_best_sol
         edges: List[Tuple[int, int]] = self.m_graph.m_edges
 
-        print(f"ngenes: {ngenes}")
         for iedge in range(0, ngenes):
             if best_sol[iedge] == 1:
                 edge_idx: int = subgraph.m_feasible_edges[iedge]
@@ -204,10 +208,10 @@ class Optimiser_Frag:
                 self.m_edge_solution[edge_idx] = 1
         self.create_new_sg(subgraph, best_sol, child_subgraphs)
 
-        print(f"Parent subgraph: ")
+        print(f"Parent subgraph: ", end="")
         for child_sg in child_subgraphs:
             print(f"{child_sg.m_natoms}, ", end="")
-        print(f"")
+        print(f"\n{'-' * shutil.get_terminal_size()[0]}")
 
         if len(child_subgraphs) == 1:
             child_subgraphs.clear()
@@ -250,7 +254,7 @@ class Optimiser_Frag:
             global_atom_idx: int = self.m_starting_subgraph.get_node(iatom)
             node_sg_nidx[global_atom_idx] = iatom
         
-        print(f"Broken bonds: ")
+        print(f"Broken bonds: ", end="")
         for fiedge in range(0, ngenes):
             iedge: int = feasible_edges[fiedge]
             if self.m_edge_solution[iedge] == 1:
@@ -269,15 +273,131 @@ class Optimiser_Frag:
         
     def post_processing(self):
         self.final_solution()
+        self.print_output_files()
 
+    def print_output_files(self):
+        # frag xyz and topo file
+        connectivity: List[Tuple[int, int, int]] = []
+
+        nedges: int = self.m_graph.m_nedges
+        edges: List[Tuple[int, int]] = self.m_graph.m_edges
+        subgraph_copy: mgraph.subgraph = mgraph.subgraph(self.m_starting_subgraph)
+        coordinates: List[float] = self.m_graph.m_coordinates
+        elements: List[int] = self.m_graph.m_elements
+        charges: List[int] = self.m_graph.m_charges
+
+        natoms: int = self.m_graph.m_natoms
+        graph_node_sg: List[int] = [0 for _ in range(natoms)]
+
+        symbol_list: List[str] = []
+
+        for iatom in range(0, natoms):
+            global_node_idx: int = self.m_starting_subgraph.get_node(iatom)
+            graph_node_sg[global_node_idx] = iatom
+            atomic_no: int = elements[iatom]
+            symbol: str = atomic_data.atom_symbols[atomic_no - 1]
+            symbol_list.append(symbol)
+        
+        for iedge in range(0, nedges):
+            if self.m_edge_solution[iedge] == 1:
+                edge: Tuple[int, int] = edges[iedge]
+
+                node1: int = edge[0]
+                node2: int = edge[1]
+            
+                local_node1_idx: int = graph_node_sg[node1]
+                local_node2_idx: int = graph_node_sg[node2]
+
+                subgraph_copy.delete_edge(local_node1_idx, local_node2_idx)
+        
+        fragid: List[int] = [0 for _ in range(natoms)]
+        nfrags: int = gtraverse.determine_fragid(fragid, subgraph_copy)
+        print(f"{nfrags} fragments generated.")
+
+        frag_atoms: List[List[int]] = [[] for _ in range(nfrags)]
+        frag_atoms_nohcap: List[List[int]] = [[] for _ in range(nfrags)]
+        frag_charges: List[int] = [0 for _ in range(nfrags)]
+
+        for iatom in range(0, natoms):
+            local_atom_idx: int = graph_node_sg[iatom]
+            fid: int = fragid[local_atom_idx]
+
+            frag_atoms[fid - 1].append(iatom)
+            frag_atoms_nohcap[fid - 1].append(iatom)
+            frag_charges[fid -1] += charges[iatom]
+        
+        hcap_neighbour: List[int] = [-1 for _ in range(natoms)]
+        for iedge in range(0, nedges):
+            if self.m_edge_solution[iedge] == 1:
+                edge: Tuple[int, int] = edges[iedge]
+
+                node1: int = edge[0]
+                node2: int = edge[1]
+            
+                local_node1_idx: int = graph_node_sg[node1]
+                local_node2_idx: int = graph_node_sg[node2]
+
+                fid1: int = fragid[local_node1_idx]
+                fid2: int = fragid[local_node2_idx]
+
+                if fid1 != fid2:
+                    frag_atoms[fid1 - 1].append(node2 + natoms)
+                    frag_atoms[fid2 - 1].append(node1 + natoms)
+
+                    hcap_neighbour[node1] = node2
+                    hcap_neighbour[node2] = node1
+
+                    connectivity.append((node1, node2, 1))
+        
+        frag_xyz_string = ""
+        for ifrag in range(0, nfrags):
+            frag_xyz_string += f"{len(frag_atoms[ifrag])}\n"
+            frag_xyz_string += f"{ifrag}.xyz\n"
+
+            for atom in frag_atoms[ifrag]:
+
+                if atom >= natoms: # hydrogen cap
+                    atom_idx: int = atom - natoms
+
+                    x_coord: float = coordinates[3 * atom_idx]
+                    y_coord: float = coordinates[3 * atom_idx + 1]
+                    z_coord: float = coordinates[3 * atom_idx + 2]
+
+                    frag_xyz_string += "{}   {}   {}   {}\n".format("H", x_coord, y_coord, z_coord) 
+                else:
+                    atomic_no: int = elements[atom] 
+                    symbol: str = atomic_data.atom_symbols[atomic_no - 1]
+
+                    x_coord: float = coordinates[3 * atom]
+                    y_coord: float = coordinates[3 * atom + 1]
+                    z_coord: float = coordinates[3 * atom + 2]
+                    frag_xyz_string += "{}   {}   {}   {}\n".format(symbol, x_coord, y_coord, z_coord) 
+        with open(f"{self.m_graph.m_name}_all_fragments.xyz", "w") as f:
+            f.write(frag_xyz_string)
+        f.close()
+
+
+        output_json: Dict[str, Any] = {}
+        output_json["symbols"] = symbol_list
+        output_json["coordinates"] = coordinates.copy()
+        output_json["connectivity"] = connectivity.copy()
+        output_json["fragment_charges"] = frag_charges.copy()
+        output_json["fragments"] = frag_atoms_nohcap.copy()
+
+        with open(f"{self.m_graph.m_name}_topo.qdxf", "w") as f:
+            json.dump(output_json, f, indent=4)
+        f.close()
+                
     def run(self) -> None:
         fragmentation_round: int = 0
         print(f"Fragmentation round: {fragmentation_round}")
+        print(f"{'-' * shutil.get_terminal_size()[0]}")
         self.frag(self.m_starting_subgraph, self.m_subgraphs, True)
 
         while True:
             fragmentation_round += 1
             print(f"Fragmentation round: {fragmentation_round}")
+            print(f"{'-' * shutil.get_terminal_size()[0]}")
             self.fragmentation_round()
             if (len(self.m_subgraphs) == 0 or fragmentation_round >= 50):
                 break
