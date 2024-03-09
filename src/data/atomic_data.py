@@ -37,6 +37,11 @@ atomic_masses: List[float] = [1.008, 4.003, 6.941, 9.012, 10.81, 12.01, 14.01, 1
                                  92.91, 95.94, 98.00, 101.07, 102.91, 106.42, 107.87, 112.41, 114.82, 118.71,
                                  121.76, 127.60, 126.90, 131.29]
 
+atom_symbols: List[str] = ["H",  "He", "Li", "Be", "B",  "C",  "N",  "O",  "F",  "Ne", "Na", "Mg", "Al", "Si",
+        "P",  "S",  "Cl", "Ar", "K",  "Ca", "Sc", "Ti", "V",  "Cr", "Mn", "Fe", "Co", "Ni",
+        "Cu", "Zn", "Ga", "Ge", "As", "Se", "Br", "Kr", "Rb", "Sr", "Y",  "Zr", "Nb", "Mo",
+        "Tc", "Ru", "Rh", "Pd", "Ag", "Cd", "In", "Sn", "Sb", "Te", "I"]
+
 def get_valence(atomic_no: int) -> int:
     match atomic_no:
         case 1:
