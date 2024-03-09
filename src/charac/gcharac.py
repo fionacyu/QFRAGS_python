@@ -365,7 +365,7 @@ def get_bond_order(dist: float, atomic_no_a: int, atomic_no_b: int) -> float:
 
 def set_edges(graph: mgraph.mgraph, box_array: boxing.mbox_array) -> None:
 
-    print(f"nx: {box_array.m_nx}, ny: {box_array.m_ny}, nz: {box_array.m_nz}")
+    # print(f"nx: {box_array.m_nx}, ny: {box_array.m_ny}, nz: {box_array.m_nz}")
     for ibox in range(0, box_array.m_nboxes):
         box_natoms: int = box_array.m_box_array[ibox].m_natoms
         box_nodes: List[int] = box_array.m_box_array[ibox].m_nodes
@@ -996,7 +996,6 @@ def pair_hyperconjugated_donors_acceptors(graph: mgraph.mgraph, boxarray: boxing
 
                                         box_array[neighbour_box].m_hyper_systems.add(hyperconj_sys_idx)
                                         box_array[neighbour_box].m_hyper_systems.add(hyperconj_sys_idx + 1)
-    print(f"no hyperconjugated systems: {len(graph.m_hyperconjugated_systems)}")
 
 def distribute_hyper_conjsys_from_mgraph(graph: mgraph.mgraph) -> None:
 

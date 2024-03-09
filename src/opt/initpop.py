@@ -420,7 +420,7 @@ def get_initial_population(graph: mgraph.mgraph, subgraph: mgraph.subgraph, targ
     node_sg_nidx: List[int] = graph.m_node_sg_nidx
     natoms: int = subgraph.m_natoms
 
-    print(f"Number of feasible edges: {len(feasible_edges)}")
+    # print(f"Number of feasible edges: {len(feasible_edges)}")
     print(f"Subgraph natoms: {subgraph.m_natoms}")
 
     subgraph_copy: mgraph.subgraph = mgraph.subgraph(subgraph)
@@ -431,7 +431,7 @@ def get_initial_population(graph: mgraph.mgraph, subgraph: mgraph.subgraph, targ
 
     reference_points, no_ref_points = get_ref_points(graph, subgraph, target_size)
 
-    print(f"no_ref_points: {no_ref_points}")
+    # print(f"no_ref_points: {no_ref_points}")
     for iedge in feasible_edges:
         edge: Tuple[int, int] = edges[iedge]
         node1: int = edge[0]
