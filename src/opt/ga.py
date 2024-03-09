@@ -79,8 +79,8 @@ class population:
         self.m_generation: int = 0
         self.m_min_score_iters: int = 0
         self.m_min_score: float = 1.0
-        self.m_best_sol: List[int] = []
         self.m_ngenes: int = len(subgraph.m_feasible_edges)
+        self.m_best_sol: List[int] = [0 for _ in range(self.m_ngenes)]
 
         self.p_comp: float
         self.p_vol: float
@@ -96,7 +96,6 @@ class population:
         self.m_boxarray: boxing.mbox_array = boxarray
 
         self.m_off_lim_edges: List[int] = [0 for _ in range(self.m_ngenes)]
-        self.m_best_solution: List[int] = [0 for _ in range(self.m_ngenes)]
 
         initial_population: List[List[int]] = initpop.get_initial_population(graph, subgraph, target_fsize)
         print(f"initial_population size: {len(initial_population)}")
@@ -104,7 +103,7 @@ class population:
         init_population_size: int = len(initial_population)
         self.num_parents_mating: int
 
-        if (init_population_size > 1 and init_population_size<= 8):
+        if (init_population_size > 1 and init_population_size <= 8):
             self.m_num_parents_mating = 2
         elif (init_population_size == 1):
             self.m_num_parents_mating = 1
@@ -118,6 +117,7 @@ class population:
         
         self.m_solutions: List[individual] = []
         individual_list: List[individual_sorter] = []
+        
         for isol, solution in enumerate(initial_population):
             indv: individual = individual(solution, self.m_ngenes, self.m_graph, self.m_subgraph, self.m_target_size, self.m_boxarray)
             indv.calculate_score()

@@ -15,8 +15,6 @@ class subgraph:
         self.m_aromatic_cycles: List[Set[int]] = []
         
         self.m_single_bonds: List[int] = []
-        self.m_conjugated_systems: List[int] = []
-        self.m_hyperconjugated_systems: List[int] = []
         
         if not value:
             self.m_offset: int # points to the atom w the smallest global index
@@ -25,13 +23,18 @@ class subgraph:
             self.m_energy: float = 0.0
             self.m_adjacency: List[Set[int]] = []
             self.m_feasible_edges: List[int] = [] # contains edge indices localed in global mgraph
+            self.m_conjugated_systems: List[int] = []
+            self.m_hyperconjugated_systems: List[int] = []
         else:
             self.m_natoms = value.m_natoms
-            self.m_offset = value.m_offset
+            self.m_offset = min(value.m_nodes)
             self.m_nodes = value.m_nodes.copy()
             self.m_energy = value.m_energy
             self.m_adjacency = [x.copy() for x in value.m_adjacency]
             self.m_feasible_edges = value.m_feasible_edges.copy()
+            self.m_conjugated_systems = value.m_conjugated_systems.copy()
+            self.m_hyperconjugated_systems = value.m_hyperconjugated_systems.copy()
+
     
     def get_node(self, node: int) -> int:
         return self.m_nodes[node]
@@ -68,6 +71,9 @@ class subgraph:
     def add_edge(self, node1: int, node2: int) -> None:
         self.m_adjacency[node1].add(node2)
         self.m_adjacency[node2].add(node1)
+    
+    def add_feasible_edge(self, iedge: int) -> None:
+        self.m_feasible_edges.append(iedge)
 
 class mgraph:
     def __init__(self) -> None:
