@@ -448,7 +448,6 @@ class mgraph:
             node2: int = edge[1]
 
             subgraph1: int = self.m_node_sg[node1] - 1
-            subgraph2: int = self.m_node_sg[node2] - 1
 
             node1_idx: int = self.m_node_sg_nidx[node1]
             node2_idx: int = self.m_node_sg_nidx[node2]
@@ -486,9 +485,11 @@ class mgraph:
         no_high_priority_bonds: bool = False
 
         if (priority_cutoff_incl == min_priority):
-            priority_cutoff_incl = sorted_priorities[1]
             if (len(sorted_priorities) == 1):
                 no_high_priority_bonds = True
+            else:
+                priority_cutoff_incl = sorted_priorities[1]
+            
 
         if not no_high_priority_bonds:
             for iedge in range(0, single_bond_no):
