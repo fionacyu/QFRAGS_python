@@ -493,8 +493,8 @@ def define_cycles(graph: mgraph.mgraph, boxarray: boxing.mbox_array) -> None:
                 valid_cycles.append(iortho_edge)
         
         graph.m_subgraphs[isubgraph].setup_cycles(len(valid_cycles))
-        for cycle_index in valid_cycles:
-            gtraverse.min_cycle(graph, shortest_paths[valid_cycles[cycle_index]], nnodes, cycle_index, boxarray, isubgraph)
+        for icycle, cycle_index in enumerate(valid_cycles):
+            gtraverse.min_cycle(graph, shortest_paths[cycle_index], nnodes, icycle, boxarray, isubgraph)
 
 def define_aromatic(graph: mgraph.mgraph) -> None:
     subgraph_count: int = len(graph.m_subgraphs)
@@ -769,7 +769,6 @@ def hyperconjugated_donors_acceptors(graph: mgraph.mgraph, boxarray: boxing.mbox
 
     # edges
     
-    # print(f"hyperconj_iedges: {hyperconj_iedges}")
     for ihyperconj_edge, hyperconj_edge in enumerate(hyperconj_iedges):
         graph.m_da_array[hyperconj_idx].set_natoms(2)
         bond = graph.m_edges[hyperconj_edge]
@@ -1040,10 +1039,10 @@ def determine_feasible_edges(graph: mgraph.mgraph) -> None:
 
         size1: int = gtraverse.bfs_sg(subgraph_copy, node1_idx, colors, graph.m_target_frag_size)
 
-        if size1 != graph.m_subgraphs[0].m_natoms:
-            size2: int = gtraverse.bfs_sg(subgraph_copy, node2_idx, colors, graph.m_target_frag_size)
-            if (size1/graph.m_target_frag_size >= 0.6 and size2/graph.m_target_frag_size >= 0.6) and (graph.m_ring_status[node1] == 0 or graph.m_ring_status[node2] == 0):
-                graph.m_subgraphs[0].m_feasible_edges.append(iedge)
+        # if size1 != graph.m_subgraphs[0].m_natoms:
+        size2: int = gtraverse.bfs_sg(subgraph_copy, node2_idx, colors, graph.m_target_frag_size)
+        if (size1/graph.m_target_frag_size >= 0.6 and size2/graph.m_target_frag_size >= 0.6) and (graph.m_ring_status[node1] == 0 or graph.m_ring_status[node2] == 0):
+            graph.m_subgraphs[0].m_feasible_edges.append(iedge)
         subgraph_copy.add_edge(node1_idx, node2_idx)
 
 
