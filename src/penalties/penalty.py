@@ -189,7 +189,7 @@ def potential_energy_sigmoid(x: float, pe_sf: float) -> float:
     
     return (pos + neg)
 
-def calculate_score(self) -> float:
+def calculate_score(self) -> None:
     # member function of inidividual
     natoms: int = self.m_subgraph.m_natoms
     global_natoms: int = self.m_graph.m_natoms
@@ -203,7 +203,7 @@ def calculate_score(self) -> float:
     conjugated_systems: Set[int] = set()
     hyperconjugated_systems: Set[int] = set()
 
-    for isol, sol in enumerate(self.solution):
+    for isol, sol in enumerate(self.m_solution):
         if sol == 1:
             # edge has been cut
             edge: Tuple[int, int] = edges[feasible_edges[isol]]
@@ -228,15 +228,11 @@ def calculate_score(self) -> float:
             for conj_system in self.m_subgraph.m_conjugated_systems:
                 if conj_system in conjugated_systems1 or conj_system in conjugated_systems2:
                     conjugated_systems.add(conj_system)
-                    # print(f"conj system: {conj_system}")
             
             for hyperconj_system in self.m_subgraph.m_hyperconjugated_systems:
                 if hyperconj_system in hyperconjugated_systems1 or hyperconj_system in hyperconjugated_systems2:
                     hyperconjugated_systems.add(hyperconj_system)
-                    # print(f"hyper system: {hyperconj_system}")
-    
-    # print(f"self.m_subgraph.m_conjugated_systems: {self.m_subgraph.m_conjugated_systems}")
-    # print(f"hyperconjugated_systems: {hyperconjugated_systems}")
+
 
     fragid: List[int] = [0 for _ in range(natoms)]
     nfrags: int = gtraverse.determine_fragid(fragid, subgraph_copy)
@@ -258,7 +254,7 @@ def calculate_score(self) -> float:
         monomer_list[ifrag].set_natoms_nohcap()
     
     # adding hydrogen caps to monomers
-    for isol, sol in enumerate(self.solution):
+    for isol, sol in enumerate(self.m_solution):
         if sol == 1:
             edge: Tuple[int, int] = edges[feasible_edges[isol]]
             node1: int = edge[0]
@@ -274,7 +270,7 @@ def calculate_score(self) -> float:
                 monomer_list[fid1 - 1].m_atom_ids.append(node2 + global_natoms)
                 monomer_list[fid2 - 1].m_atom_ids.append(node1 + global_natoms)
             else:
-                self.solution[isol] = 0
+                self.m_solution[isol] = 0
     
     for ifrag in range(0, nfrags): 
         monomer_list[ifrag].set_natoms()
@@ -311,9 +307,9 @@ def calculate_score(self) -> float:
     final_penalty += self.m_graph.m_beta_conj * self.p_conj
     final_penalty += self.m_graph.m_beta_hyper * self.p_hyper
     final_penalty += self.m_graph.m_beta_vol * self.p_vol
-
+    self.m_score = final_penalty
     # update off limit edges
-    for isol, sol in enumerate(self.solution):
+    for isol, sol in enumerate(self.m_solution):
         if (sol == 1):
             edge: Tuple[int, int] = edges[feasible_edges[isol]]
             node1: int = edge[0]
@@ -341,6 +337,3 @@ def calculate_score(self) -> float:
 
             if abs(dimer_energy[dimer_idx]) > 10.0:
                 self.m_off_lim_edges[isol] = 1
-
-    
-    return final_penalty
