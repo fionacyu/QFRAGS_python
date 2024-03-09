@@ -192,7 +192,6 @@ class Optimiser_Frag:
         best_sol: List[int] = pop.m_best_sol
         edges: List[Tuple[int, int]] = self.m_graph.m_edges
 
-        print(f"len best_sol: {len(best_sol)}")
         print(f"ngenes: {ngenes}")
         for iedge in range(0, ngenes):
             if best_sol[iedge] == 1:
@@ -209,6 +208,9 @@ class Optimiser_Frag:
         for child_sg in child_subgraphs:
             print(f"{child_sg.m_natoms}, ", end="")
         print(f"")
+
+        if len(child_subgraphs) == 1:
+            child_subgraphs.clear()
         
         if first:
             temp_subgraphs: List[mgraph.subgraph] = []
